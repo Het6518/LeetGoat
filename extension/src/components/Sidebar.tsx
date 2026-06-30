@@ -1,5 +1,7 @@
 import type { FC } from "react";
 import type {Problem} from "../types/problem"
+import ProblemCard from "./problem/ProblemCard";
+
 interface SidebarProps {
     open: boolean;
     problem: Problem | null;
@@ -30,7 +32,7 @@ const Sidebar: FC<SidebarProps> = ({ open, problem }) => {
         🐐 LeetGoat
       </h1>
     
-   <div style={{ padding: "24px" }}>
+   {/* <div style={{ padding: "24px" }}>
   <p
     style={{
       fontSize: "12px",
@@ -52,6 +54,9 @@ const Sidebar: FC<SidebarProps> = ({ open, problem }) => {
       </span>
     ))}
   </div>
+</div> */}
+<div style={{ padding: "24px" }}>
+    <ProblemCard problem={problem} />
 </div>
     </div>
   );
