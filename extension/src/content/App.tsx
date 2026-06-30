@@ -1,39 +1,34 @@
-
-import FloatingButton from "../components/FloatingButton";
-import Sidebar from "../components/Sidebar";
 import { useEffect, useState } from "react";
-import { getProblemSlug } from "../lib/getProblemSlug";
+import FloatingButton from "../components/FloatingButton";
+import Sidebar from "../components/layout/Sidebar";
 import { fetchProblem } from "../api/leetcode";
+import { getProblemSlug } from "../lib/getProblemSlug";
 import type { Problem } from "../types/problem";
+
 export default function App() {
   const [open, setOpen] = useState(false);
-const [problem, setProblem] = useState<Problem | null>(null);
-useEffect(() => {
-  async function loadProblem() {
-    const slug = getProblemSlug();
+  const [problem, setProblem] = useState<Problem | null>(null);
 
-    if (!slug) return;
+  useEffect(() => {
+    async function loadProblem() {
+      const slug = getProblemSlug();
+      if (!slug) return;
 
-    const problem = await fetchProblem(slug);
+      try {
+        const data = await fetchProblem(slug);
+        setProblem(data);
+      } catch (error) {
+        console.error("Failed to fetch problem:", error);
+      }
+    }
 
-    console.log(problem);
+    loadProblem();
+  }, []);
 
-    setProblem(problem);
-  }
-
-  loadProblem();
-}, []);
   return (
     <>
-      <FloatingButton
-        onClick={() => setOpen(!open)}
-      />
-
-   <Sidebar
-    open={open}
-    problem={problem}
-/>
-
+      <FloatingButton onClick={() => setOpen((prev) => !prev)} />
+      <Sidebar open={open} problem={problem} />
     </>
   );
 }

@@ -1,32 +1,18 @@
-import type { FC } from "react";
+import { Code2 } from "lucide-react";
 
 interface FloatingButtonProps {
   onClick: () => void;
 }
 
-const FloatingButton: FC<FloatingButtonProps> = ({ onClick }) => {
+export default function FloatingButton({ onClick }: FloatingButtonProps) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      style={{
-        position: "fixed",
-        bottom: "24px",
-        right: "24px",
-        width: "56px",
-        height: "56px",
-        borderRadius: "999px",
-        border: "none",
-        cursor: "pointer",
-        background: "#111827",
-        color: "white",
-        fontSize: "24px",
-        zIndex: 999999,
-        boxShadow: "0 8px 20px rgba(0,0,0,.25)",
-      }}
+      className="fixed bottom-6 right-6 z-[999998] flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-violet-700 text-white shadow-xl transition hover:scale-105"
+      aria-label="Open LeetGoat"
     >
-      🐐
+      <Code2 size={24} />
     </button>
   );
-};
-
-export default FloatingButton;
+}
