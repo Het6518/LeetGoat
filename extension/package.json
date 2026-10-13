@@ -1,13 +1,15 @@
 {
-  "name": "extension",
+  "name": "leetgoat",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "icons": "node scripts/generate-icons.mjs",
+    "zip": "node scripts/zip.mjs",
+    "release": "npm run build && npm run zip"
   },
   "dependencies": {
     "@crxjs/vite-plugin": "^2.7.0",

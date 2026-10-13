@@ -1,8 +1,145 @@
 @import "tailwindcss";
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-  font-family: Inter, sans-serif;
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Sizes are in px, not rem: the UI is mounted inside LeetCode's page, whose
+ * root font-size we don't control.
+ */
+@theme {
+  --spacing: 4px;
+  --text-2xs: 10px;
+  --text-2xs--line-height: 14px;
+  --text-xs: 11px;
+  --text-xs--line-height: 16px;
+  --text-sm: 12.5px;
+  --text-sm--line-height: 18px;
+  --text-base: 13.5px;
+  --text-base--line-height: 20px;
+  --text-lg: 15px;
+  --text-lg--line-height: 22px;
+  --text-xl: 17px;
+  --text-xl--line-height: 24px;
+  --text-2xl: 22px;
+  --text-2xl--line-height: 28px;
+  --text-3xl: 30px;
+  --text-3xl--line-height: 36px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --color-easy: #00a693;
+  --color-medium: #e69500;
+  --color-hard: #e5484d;
+}
+
+@theme inline {
+  --color-canvas: var(--lg-canvas);
+  --color-surface: var(--lg-surface);
+  --color-raised: var(--lg-raised);
+  --color-line: var(--lg-line);
+  --color-fg: var(--lg-fg);
+  --color-muted: var(--lg-muted);
+  --color-faint: var(--lg-faint);
+  --color-accent: var(--lg-accent);
+  --color-accent-fg: var(--lg-accent-fg);
+  --color-accent-soft: var(--lg-accent-soft);
+}
+
+.lg-theme {
+  --lg-canvas: #f6f6f7;
+  --lg-surface: #ffffff;
+  --lg-raised: #f0f0f2;
+  --lg-line: #e4e4e8;
+  --lg-fg: #1a1a1e;
+  --lg-muted: #5f5f69;
+  --lg-faint: #9898a2;
+  --lg-accent: #d97706;
+  --lg-accent-fg: #ffffff;
+  --lg-accent-soft: #fef3e2;
+  color-scheme: light;
+  color: var(--lg-fg);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
+  -webkit-font-smoothing: antialiased;
+}
+
+.lg-theme.dark {
+  --lg-canvas: #131315;
+  --lg-surface: #1b1b1e;
+  --lg-raised: #242428;
+  --lg-line: #2d2d32;
+  --lg-fg: #ececef;
+  --lg-muted: #a3a3ad;
+  --lg-faint: #6a6a74;
+  --lg-accent: #ffa116;
+  --lg-accent-fg: #1c1204;
+  --lg-accent-soft: #33240c;
+  color-scheme: dark;
+}
+
+.lg-theme ::selection {
+  background: color-mix(in oklab, var(--lg-accent) 35%, transparent);
+}
+
+.lg-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--lg-line) transparent;
+}
+
+/* Hint / LeetCode-authored HTML */
+.lg-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--lg-raised);
+}
+.lg-prose p + p {
+  margin-top: 6px;
+}
+
+@keyframes lg-pop {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.lg-pop {
+  animation: lg-pop 0.22s ease-out both;
+}
+
+@keyframes lg-verdict {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  20% {
+    transform: scale(1);
+  }
+  82% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+.lg-verdict {
+  animation: lg-verdict 2.6s ease-out both;
 }

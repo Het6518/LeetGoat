@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LeetGoat — How It Works</title>
+<style>
+  :root {
+    --bg: #f6f6f7; --surface: #ffffff; --raised: #f0f0f2; --line: #e4e4e8;
+    --fg: #1a1a1e; --muted: #5f5f69; --faint: #9898a2;
+    --accent: #d97706; --accent-soft: #fef3e2;
+    --green: #00a693; --red: #e5484d; --blue: #2f6fde; --purple: #7c4dff;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #131315; --surface: #1b1b1e; --raised: #242428; --line: #2d2d32;
+      --fg: #ececef; --muted: #a3a3ad; --faint: #6a6a74;
+      --accent: #ffa116; --accent-soft: #33240c;
+      --green: #2fc4ad; --red: #ff6b6f; --blue: #6b9cff; --purple: #a98bff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 1040px; margin: 0 auto; padding: 40px 20px 80px; }
+  header.hero { display: flex; gap: 16px; align-items: center; margin-bottom: 8px; }
+  .logo {
+    width: 52px; height: 52px; border-radius: 14px; background: var(--accent);
+    display: grid; place-items: center; color: #1c1204; flex-shrink: 0;
+  }
+  h1 { margin: 0; font-size: 30px; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); margin: 2px 0 0; }
+  h2 { font-size: 21px; margin: 48px 0 6px; letter-spacing: -0.01em; }
+  h2 + p { color: var(--muted); margin-top: 0; }
+  code, .mono { font-family: var(--mono); font-size: 0.86em; }
+  code { background: var(--raised); padding: 1px 5px; border-radius: 4px; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .grid { display: grid; gap: 12px; }
+  .grid.cols-3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+
+  /* Architecture diagram */
+  .diagram { overflow-x: auto; }
+  .diagram svg { min-width: 860px; width: 100%; height: auto; display: block; }
+  .diagram text { fill: var(--fg); font-family: system-ui, sans-serif; }
+  .diagram .t-title { font-size: 14px; font-weight: 700; }
+  .diagram .t-small { font-size: 11.5px; fill: var(--muted); }
+  .diagram .t-file { font-size: 10.5px; fill: var(--faint); font-family: var(--mono); }
+  .diagram .t-label { font-size: 11px; fill: var(--muted); }
+  .box { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+  .zone { fill: var(--raised); stroke: var(--line); stroke-dasharray: 5 4; }
+  .arrow { stroke: var(--faint); stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+  .arrow.accent { stroke: var(--accent); marker-end: url(#arrow-accent); }
+  .dot-accent { fill: var(--accent); }
+  .dot-blue { fill: var(--blue); }
+  .dot-green { fill: var(--green); }
+  .dot-purple { fill: var(--purple); }
+  .dot-red { fill: var(--red); }
+
+  /* Pieces */
+  .piece h3 { margin: 0 0 4px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .piece p { margin: 0 0 8px; color: var(--muted); font-size: 14px; }
+  .piece ul { margin: 0; padding-left: 18px; font-size: 13.5px; }
+  .piece li { margin: 3px 0; }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex-shrink: 0; }
+  .where { font-family: var(--mono); font-size: 11.5px; color: var(--faint); margin-top: 10px; }
+
+  /* Flow tabs */
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 16px; }
+  .tab {
+    border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+    border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 13.5px; cursor: pointer;
+  }
+  .tab:hover { color: var(--fg); }
+  .tab[aria-selected="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .flow { display: none; }
+  .flow.active { display: block; }
+  .flow-intro { color: var(--muted); margin: 0 0 18px; }
+  ol.steps { list-style: none; margin: 0; padding: 0; position: relative; }
+  ol.steps::before {
+    content: ""; position: absolute; left: 15px; top: 8px; bottom: 8px; width: 2px; background: var(--line);
+  }
+  ol.steps li { position: relative; padding: 0 0 18px 48px; }
+  ol.steps li:last-child { padding-bottom: 0; }
+  .num {
+    position: absolute; left: 0; top: 0; width: 32px; height: 32px; border-radius: 50%;
+    display: grid; place-items: center; font-weight: 700; font-size: 13px;
+    background: var(--surface); border: 2px solid var(--line); color: var(--muted);
+  }
+  .steps li.key .num { border-color: var(--accent); color: var(--accent); }
+  .steps li.good .num { border-color: var(--green); color: var(--green); }
+  .steps li.bad .num { border-color: var(--red); color: var(--red); }
+  .step-title { font-weight: 600; }
+  .step-body { color: var(--muted); font-size: 14px; }
+  .step-file { font-family: var(--mono); font-size: 11.5px; color: var(--faint); }
+  .branch {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px;
+  }
+  .branch > div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; background: var(--bg); }
+  .branch .g { border-color: color-mix(in oklab, var(--green) 50%, var(--line)); }
+  .branch .r { border-color: color-mix(in oklab, var(--red) 50%, var(--line)); }
+  .branch b { display: block; margin-bottom: 2px; }
+  @media (max-width: 640px) { .branch { grid-template-columns: 1fr; } }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--faint); font-weight: 600; }
+  td:first-child { white-space: nowrap; }
+  .pill { display: inline-block; border-radius: 6px; padding: 1px 7px; font-size: 12px; font-weight: 600; }
+  .pill.g { background: color-mix(in oklab, var(--green) 15%, transparent); color: var(--green); }
+  .pill.r { background: color-mix(in oklab, var(--red) 15%, transparent); color: var(--red); }
+  .pill.a { background: var(--accent-soft); color: var(--accent); }
+  .note { font-size: 13px; color: var(--muted); margin-top: 10px; }
+  footer { margin-top: 56px; color: var(--faint); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+
+<header class="hero">
+  <div class="logo" aria-hidden="true">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8.5 8.5C7 5.5 4.5 4 2.5 4.5c1 1.5 2.5 3 4 4" /><path d="M15.5 8.5c1.5-3 4-4.5 6-4c-1 1.5-2.5 3-4 4" />
+      <path d="M7 9h10l-1.6 6.2L12 20l-3.4-4.8z" /><path d="M10 12.5h.01M14 12.5h.01" />
+    </svg>
+  </div>
+  <div>
+    <h1>How LeetGoat works</h1>
+    <p class="sub">The pieces of the extension, how they talk to each other, and what happens step by step.</p>
+  </div>
+</header>
+
+<!-- ============================ ARCHITECTURE ============================ -->
+<h2>The big picture</h2>
+<p>A Chrome extension is several separate programs. LeetGoat has five, plus the browser storage they all share.</p>
+
+<div class="card diagram">
+<svg viewBox="0 0 960 520" role="img" aria-label="Architecture diagram of LeetGoat">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor" style="fill: var(--faint)" />
+    </marker>
+    <marker id="arrow-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" style="fill: var(--accent)" />
+    </marker>
+  </defs>
+
+  <!-- LeetCode tab zone -->
+  <rect class="zone" x="20" y="20" width="560" height="300" rx="16" />
+  <text x="40" y="48" class="t-title">A leetcode.com tab</text>
+  <text x="40" y="66" class="t-small">Two worlds share one page but can't see each other's JavaScript</text>
+
+  <!-- Page world -->
+  <rect class="box" x="40" y="84" width="220" height="214" rx="12" />
+  <circle cx="60" cy="106" r="5" class="dot-purple" />
+  <text x="72" y="110" class="t-title">Page bridge</text>
+  <text x="56" y="132" class="t-small">Runs in LeetCode's own JS</text>
+  <text x="56" y="156" class="t-small">• hooks fetch → reads verdicts</text>
+  <text x="56" y="176" class="t-small">• Monaco editor: insert snippets</text>
+  <text x="56" y="196" class="t-small">• Monaco editor: detect pastes</text>
+  <text x="56" y="222" class="t-small">LeetCode's page code + editor</text>
+  <text x="56" y="240" class="t-small">live in this same world</text>
+  <text x="56" y="284" class="t-file">public/bridge.js</text>
+
+  <!-- Content script -->
+  <rect class="box" x="340" y="84" width="220" height="214" rx="12" />
+  <circle cx="360" cy="106" r="5" class="dot-accent" />
+  <text x="372" y="110" class="t-title">Content script (UI)</text>
+  <text x="356" y="132" class="t-small">React app in a Shadow DOM</text>
+  <text x="356" y="156" class="t-small">• Floating dock</text>
+  <text x="356" y="176" class="t-small">• Sidebar: Solve / Plan / Review</text>
+  <text x="356" y="196" class="t-small">   / Cheat check / Settings</text>
+  <text x="356" y="216" class="t-small">• Snippet palette</text>
+  <text x="356" y="236" class="t-small">• ACCEPTED / REJECTED banner</text>
+  <text x="356" y="284" class="t-file">src/content/*</text>
+
+  <!-- bridge <-> content -->
+  <path class="arrow accent" d="M262 170 L338 170" />
+  <path class="arrow" d="M338 196 L262 196" />
+  <text x="300" y="160" class="t-label" text-anchor="middle">postMessage</text>
+
+  <!-- Background -->
+  <rect class="box" x="640" y="40" width="300" height="130" rx="12" />
+  <circle cx="660" cy="62" r="5" class="dot-blue" />
+  <text x="672" y="66" class="t-title">Background service worker</text>
+  <text x="656" y="90" class="t-small">• Installs the page bridge</text>
+  <text x="656" y="110" class="t-small">• Alt+G / Alt+S keyboard shortcuts</text>
+  <text x="656" y="130" class="t-small">• Due-review count on the toolbar icon</text>
+  <text x="656" y="156" class="t-file">src/background/index.ts</text>
+
+  <!-- Popup -->
+  <rect class="box" x="640" y="196" width="300" height="104" rx="12" />
+  <circle cx="660" cy="218" r="5" class="dot-green" />
+  <text x="672" y="222" class="t-title">Toolbar popup</text>
+  <text x="656" y="246" class="t-small">Daily challenge, Review, Plan, Settings</text>
+  <text x="656" y="266" class="t-small">(opens when you click the goat icon)</text>
+  <text x="656" y="288" class="t-file">src/popup/*</text>
+
+  <path class="arrow" d="M640 120 L562 150" />
+  <text x="600" y="108" class="t-label" text-anchor="middle">shortcuts</text>
+
+  <!-- Storage -->
+  <rect class="box" x="200" y="370" width="380" height="120" rx="12" />
+  <circle cx="220" cy="392" r="5" class="dot-red" />
+  <text x="232" y="396" class="t-title">chrome.storage.local (shared memory)</text>
+  <text x="216" y="420" class="t-small">p:&lt;slug&gt; one record per problem · settings · activity</text>
+  <text x="216" y="440" class="t-small">planmeta (plan cache) · snippets · sound:success / sound:fail</text>
+  <text x="216" y="464" class="t-small">Every piece reads/writes here and gets live change events</text>
+  <text x="216" y="482" class="t-file">src/lib/storage.ts</text>
+
+  <path class="arrow" d="M440 298 L420 368" />
+  <path class="arrow" d="M640 150 L590 372" />
+  <path class="arrow" d="M640 284 L604 372" />
+
+  <!-- LeetCode APIs -->
+  <rect class="box" x="640" y="370" width="300" height="120" rx="12" />
+  <text x="656" y="396" class="t-title">LeetCode servers</text>
+  <text x="656" y="420" class="t-small">GraphQL: problem, daily, plan status,</text>
+  <text x="656" y="440" class="t-small">contest history, code replays</text>
+  <text x="656" y="460" class="t-small">REST: contest info, submission check</text>
+  <text x="656" y="482" class="t-file">src/api/leetcode.ts</text>
+  <path class="arrow" d="M790 300 L790 368" />
+</svg>
+</div>
+
+<div class="grid cols-3" style="margin-top:12px">
+  <div class="card piece">
+    <h3><span class="swatch" style="background:var(--purple)"></span>Why a separate “page bridge”?</h3>
+    <p>Content scripts run in an isolated world: they can see LeetCode's HTML but not its JavaScript. The editor (Monaco) and LeetCode's network requests only exist in the page's own world, so a tiny plain-JS file runs there and relays what it sees.</p>
+    <div class="where">public/bridge.js · src/lib/bridge.ts</div>
+  </div>
+  <div class="card piece">
+    <h3><span class="swatch" style="background:var(--accent)"></span>Why a Shadow DOM?</h3>
+    <p>LeetCode's CSS and ours would break each other. The whole UI is mounted inside a shadow root, so styles can't leak in or out. Tailwind's CSS is injected into that root as a string.</p>
+    <div class="where">src/content/index.tsx · src/styles/content.css</div>
+  </div>
+  <div class="card piece">
+    <h3><span class="swatch" style="background:var(--red)"></span>Why storage, not messages?</h3>
+    <p>Sidebar, popup and background never call each other for data. They all read <code>chrome.storage.local</code> and re-render when it changes, so every view stays in sync automatically.</p>
+    <div class="where">src/hooks/useStorage.ts</div>
+  </div>
+</div>
+
+<!-- ============================ FLOWS ============================ -->
+<h2>Step-by-step flows</h2>
+<p>Pick a flow to see what happens, in order, and which file does each step.</p>
+
+<div class="tabs" role="tablist">
+  <button class="tab" role="tab" aria-selected="true" data-flow="open">Opening a problem</button>
+  <button class="tab" role="tab" aria-selected="false" data-flow="submit">Submitting → banner & sound</button>
+  <button class="tab" role="tab" aria-selected="false" data-flow="review">Rating & reviews</button>
+  <button class="tab" role="tab" aria-selected="false" data-flow="cheat">Cheat check</button>
+  <button class="tab" role="tab" aria-selected="false" data-flow="snippets">Snippets</button>
+  <button class="tab" role="tab" aria-selected="false" data-flow="paste">Paste tracking</button>
+  <button class="tab" role="tab" aria-selected="false" data-flow="plan">Study plan</button>
+  <button class="tab" role="tab" aria-selected="false" data-flow="install">Startup</button>
+</div>
+
+<!-- Opening a problem -->
+<section class="card flow active" id="flow-open">
+  <p class="flow-intro">You click a problem on LeetCode. LeetCode is a single-page app, so the page doesn't reload — LeetGoat has to notice the URL change itself.</p>
+  <ol class="steps">
+    <li><span class="num">1</span><div class="step-title">Detect the problem</div>
+      <div class="step-body">Every 0.6s the content script reads the URL. <code>/problems/two-sum/</code> (or <code>/contest/…/problems/…</code>) → slug <code>two-sum</code>.</div>
+      <div class="step-file">src/hooks/usePage.ts → useProblemSlug</div></li>
+    <li><span class="num">2</span><div class="step-title">Fetch problem data</div>
+      <div class="step-body">One GraphQL request: title, difficulty, topics, acceptance, hints, similar problems, constraints text, and whether you've solved it.</div>
+      <div class="step-file">src/api/leetcode.ts → fetchProblem</div></li>
+    <li><span class="num">3</span><div class="step-title">Create / update the problem record</div>
+      <div class="step-body">Saves <code>p:two-sum</code> in storage with the latest title and difficulty.</div>
+      <div class="step-file">src/lib/storage.ts → touchProblem</div></li>
+    <li class="key"><span class="num">4</span><div class="step-title">Start the focus timer</div>
+      <div class="step-body">Auto-starts if the problem is unsolved or due for review. Pauses when you switch tabs, saves every 15s, survives reloads.</div>
+      <div class="step-file">src/hooks/useTimer.ts</div></li>
+    <li><span class="num">5</span><div class="step-title">Build the Solve tab</div>
+      <div class="step-body">Constraints are parsed (e.g. <code>n ≤ 10⁵</code> → “aim for O(n log n)”), hints are revealed one at a time, similar problems show your solved status.</div>
+      <div class="step-file">src/lib/constraints.ts · src/components/solve/*</div></li>
+  </ol>
+</section>
+
+<!-- Submit -->
+<section class="card flow" id="flow-submit">
+  <p class="flow-intro">You press Submit. Two independent detectors race; whichever sees the verdict first wins, and the other is ignored.</p>
+  <ol class="steps">
+    <li><span class="num">1</span><div class="step-title">LeetCode polls for the result</div>
+      <div class="step-body">After submitting, LeetCode's own code repeatedly calls <code>/submissions/detail/&lt;id&gt;/check/</code> (or <code>/v2/check/</code>) until the judge finishes.</div>
+      <div class="step-file">LeetCode's page code</div></li>
+    <li class="key"><span class="num">2</span><div class="step-title">The bridge reads that response</div>
+      <div class="step-body">bridge.js wrapped <code>fetch</code> and <code>XMLHttpRequest</code> before LeetCode loaded. When a response says <code>state: SUCCESS</code> (and AI judging is done), it maps the status code — 10 Accepted, 11 Wrong Answer, 14 TLE, 15 Runtime Error, 20 Compile Error — and posts it to the content script.</div>
+      <div class="step-file">public/bridge.js → reportCheck</div></li>
+    <li><span class="num">3</span><div class="step-title">Backup: read the screen</div>
+      <div class="step-body">Every 0.8s the content script also looks at the result panel (the Accepted heading, or a rejected heading when a submission is open). Same verdict, used only if step 2 missed it.</div>
+      <div class="step-file">src/hooks/usePage.ts → useSubmissionWatcher</div></li>
+    <li><span class="num">4</span><div class="step-title">One handler, de-duplicated by submission id</div>
+      <div class="step-file">src/content/App.tsx → handleVerdict</div>
+      <div class="branch">
+        <div class="g"><b style="color:var(--green)">Accepted</b>Big green <b>ACCEPTED · Well done! 🎉</b> + fanfare. Timer pauses. Problem marked solved, sidebar opens with the rating prompt.</div>
+        <div class="r"><b style="color:var(--red)">Anything else</b>Big red <b>REJECTED · Wrong Answer</b> (or TLE, etc.) + “faaah”. Fail counter for this attempt goes up.</div>
+      </div></li>
+    <li><span class="num">5</span><div class="step-title">Sound</div>
+      <div class="step-body">Built-in sounds are synthesized live with the Web Audio API (no audio files). If you uploaded your own clip in Settings, that plays instead.</div>
+      <div class="step-file">src/lib/sounds.ts · src/content/VerdictBanner.tsx</div></li>
+  </ol>
+</section>
+
+<!-- Review -->
+<section class="card flow" id="flow-review">
+  <p class="flow-intro">Spaced repetition: solved problems come back right before you'd forget them.</p>
+  <ol class="steps">
+    <li><span class="num">1</span><div class="step-title">You rate the attempt</div>
+      <div class="step-body">Needed help · Struggled · Solid · Easy. One is pre-selected from what happened: time vs your target, wrong submissions, hints used, outside pastes.</div>
+      <div class="step-file">src/components/solve/RatePrompt.tsx · src/lib/srs.ts → suggestRating</div></li>
+    <li class="key"><span class="num">2</span><div class="step-title">Schedule the next review</div>
+      <div class="step-body">An SM-2 style formula sets the next date: first “Solid” → 4 days, then 10, then growing by your “ease”. “Needed help” resets to 1 day.</div>
+      <div class="step-file">src/lib/srs.ts → schedule · src/lib/actions.ts → rateProblem</div></li>
+    <li><span class="num">3</span><div class="step-title">Toolbar badge</div>
+      <div class="step-body">The background worker counts due reviews whenever storage changes (and every 30 minutes) and shows the number on the goat icon.</div>
+      <div class="step-file">src/background/index.ts → refreshBadge</div></li>
+    <li><span class="num">4</span><div class="step-title">Review it</div>
+      <div class="step-body">Open it from the Review tab or popup. A “Review time” banner appears; the timer starts fresh; rating again pushes the next date further out.</div>
+      <div class="step-file">src/components/shared/ReviewList.tsx</div></li>
+  </ol>
+</section>
+
+<!-- Cheat check -->
+<section class="card flow" id="flow-cheat">
+  <p class="flow-intro">On any profile page (<code>/u/&lt;name&gt;/</code>) tap the shield in the dock. Only available away from problem pages.</p>
+  <ol class="steps">
+    <li><span class="num">1</span><div class="step-title">Load contest history</div>
+      <div class="step-body">GraphQL <code>userContestRankingHistory</code> → every contest the account attended (title, rating change, problems solved).</div>
+      <div class="step-file">src/api/leetcode.ts → fetchContestHistory</div></li>
+    <li><span class="num">2</span><div class="step-title">Get each contest's problems</div>
+      <div class="step-file">src/api/leetcode.ts → fetchContestQuestions</div></li>
+    <li class="key"><span class="num">3</span><div class="step-title">Read LeetCode's Code Replay</div>
+      <div class="step-body">One GraphQL request per contest asks <code>userContestReplayEvents</code> for all 4 problems. Each event has a type: <span class="mono">7</span> = typing, <span class="mono">5</span> = submit, <span class="mono">10</span> = <b>External Paste</b> (with the pasted text).</div>
+      <div class="step-file">src/api/leetcode.ts → fetchReplayEvents</div></li>
+    <li><span class="num">4</span><div class="step-title">Judge each problem → contest</div>
+      <div class="step-body">A problem is <span class="pill r">External paste</span> if any paste is over 200 characters. A contest is flagged if any of its problems is.</div>
+      <div class="step-file">src/lib/contest.ts → analyzeProblem</div></li>
+    <li><span class="num">5</span><div class="step-title">Final verdict</div>
+      <div class="branch">
+        <div class="r"><b style="color:var(--red)">Likely a cheater</b>Flagged contests ≥ half of contests taken.</div>
+        <div class="g"><b style="color:var(--green)">Not a cheater</b>Fewer than half. (No replay data at all → “Nothing to check”.)</div>
+      </div>
+      <div class="step-file" style="margin-top:6px">src/lib/contest.ts → scanAccount · src/components/contest/AccountPanel.tsx</div></li>
+  </ol>
+</section>
+
+<!-- Snippets -->
+<section class="card flow" id="flow-snippets">
+  <p class="flow-intro">Insert a template (union-find, Dijkstra, binary search…) at your cursor.</p>
+  <ol class="steps">
+    <li><span class="num">1</span><div class="step-title">Open the palette</div>
+      <div class="step-body">Press <b>Alt+S</b> (Chrome sends it to the background worker, which forwards it to the tab) or click <code>{ }</code> in the dock.</div>
+      <div class="step-file">src/background/index.ts → commands · src/content/App.tsx</div></li>
+    <li><span class="num">2</span><div class="step-title">Filter by your language</div>
+      <div class="step-body">Asks the bridge which language the editor is in, then shows matching built-ins plus your own snippets.</div>
+      <div class="step-file">src/components/snippets/SnippetPalette.tsx · src/data/snippets.ts</div></li>
+    <li class="key"><span class="num">3</span><div class="step-title">Insert</div>
+      <div class="step-body">Content script posts <code>insert</code> → bridge calls Monaco's <code>executeEdits</code> at the cursor, matching indentation. If the editor can't be reached, the code is copied to your clipboard instead.</div>
+      <div class="step-file">src/lib/bridge.ts → insertIntoEditor · public/bridge.js</div></li>
+  </ol>
+</section>
+
+<!-- Paste tracking -->
+<section class="card flow" id="flow-paste">
+  <p class="flow-intro">Keeps your practice honest: pasting a solution shouldn't count as “I solved it”.</p>
+  <ol class="steps">
+    <li><span class="num">1</span><div class="step-title">Remember what you copy</div>
+      <div class="step-body">The bridge notes text you copy inside the page (Ctrl+C in the editor, or from the problem).</div></li>
+    <li class="key"><span class="num">2</span><div class="step-title">Catch pastes in the editor</div>
+      <div class="step-body">Monaco's <code>onDidPaste</code> fires. Pastes of 40+ characters that you didn't just copy on the page count as <b>external</b>.</div>
+      <div class="step-file">public/bridge.js → attach</div></li>
+    <li><span class="num">3</span><div class="step-title">Record it for this attempt</div>
+      <div class="step-body">A toast appears, the Solve tab shows a warning, and a paste of 200+ characters pre-selects “Needed help” when you rate.</div>
+      <div class="step-file">src/lib/actions.ts → recordPaste · src/lib/srs.ts</div></li>
+  </ol>
+</section>
+
+<!-- Plan -->
+<section class="card flow" id="flow-plan">
+  <p class="flow-intro">Grind 75, NeetCode 150 and Blind 75, with your real solved status.</p>
+  <ol class="steps">
+    <li><span class="num">1</span><div class="step-title">Lists are bundled</div>
+      <div class="step-body">Only problem slugs and sections ship with the extension (all 168 verified to exist).</div>
+      <div class="step-file">src/data/plans.ts</div></li>
+    <li class="key"><span class="num">2</span><div class="step-title">One request for everything</div>
+      <div class="step-body">A single batched GraphQL query fetches title, difficulty and your status for all plan problems. Cached in storage for 10 minutes.</div>
+      <div class="step-file">src/lib/plans.ts → refreshPlanMeta</div></li>
+    <li><span class="num">3</span><div class="step-title">Progress & “next”</div>
+      <div class="step-body">Solved = LeetCode says solved, or LeetGoat saw you solve it. “Next” = first unsolved, non-premium problem in order — also the ⏭ button in the dock.</div>
+      <div class="step-file">src/lib/plans.ts → planProgress · src/components/plan/PlanPanel.tsx</div></li>
+  </ol>
+</section>
+
+<!-- Install -->
+<section class="card flow" id="flow-install">
+  <p class="flow-intro">What happens when Chrome starts or you click “Reload” on the extension.</p>
+  <ol class="steps">
+    <li><span class="num">1</span><div class="step-title">Background worker wakes up</div>
+      <div class="step-body"><code>onInstalled</code> / <code>onStartup</code> fire.</div>
+      <div class="step-file">src/background/index.ts</div></li>
+    <li class="key"><span class="num">2</span><div class="step-title">Register the page bridge</div>
+      <div class="step-body">Registers <code>bridge.js</code> to run in the page's own world at <code>document_start</code> — before LeetCode's scripts, so its fetch hook is in place. This is why you must <b>refresh LeetCode tabs</b> after reloading the extension.</div></li>
+    <li><span class="num">3</span><div class="step-title">Badge alarm</div>
+      <div class="step-body">A 30-minute alarm keeps the due-review count fresh even when nothing changes.</div></li>
+    <li><span class="num">4</span><div class="step-title">On each LeetCode page</div>
+      <div class="step-body">The content script mounts the Shadow DOM, registers Tailwind's CSS properties on the page, and renders the dock.</div>
+      <div class="step-file">src/content/index.tsx</div></li>
+  </ol>
+</section>
+
+<!-- ============================ WHERE THINGS SHOW ============================ -->
+<h2>What you see where</h2>
+<p>The sidebar adapts to the page you're on.</p>
+<div class="card">
+  <table>
+    <thead><tr><th>Page</th><th>Sidebar tabs</th><th>Dock buttons</th></tr></thead>
+    <tbody>
+      <tr><td>Problem page</td><td>Solve · Plan · Review</td><td>Goat (sidebar) · timer · <code>{ }</code> snippets · ⏭ next · 🔊 sound</td></tr>
+      <tr><td>Profile <code>/u/&lt;name&gt;</code></td><td>Plan · Review · Cheat check</td><td>Goat · 🛡 cheat check · ⏭ next · 🔊</td></tr>
+      <tr><td>Any other LeetCode page</td><td>Plan · Review · Cheat check</td><td>Goat · ⏭ next · 🔊</td></tr>
+      <tr><td>Toolbar popup</td><td>Review (with daily challenge) · Plan · Settings</td><td>—</td></tr>
+    </tbody>
+  </table>
+  <p class="note">The ⚙ in the sidebar header opens Settings everywhere: target times, auto-timer, hidden topics, paste tracking, interview mode, sounds, theme, backup.</p>
+</div>
+
+<!-- ============================ DATA ============================ -->
+<h2>What's stored</h2>
+<p>Everything lives in your browser only (<code>chrome.storage.local</code>). Export/import from Settings.</p>
+<div class="card">
+  <table>
+    <thead><tr><th>Key</th><th>Contents</th></tr></thead>
+    <tbody>
+      <tr><td><code>p:&lt;slug&gt;</code></td><td>One per problem: title, difficulty, topics, solved date, time spent, attempts, current attempt (time / hints / fails / pasted), review schedule, rating history.</td></tr>
+      <tr><td><code>settings</code></td><td>Theme, target times, toggles, sound choices, chosen study plan.</td></tr>
+      <tr><td><code>activity</code></td><td>Per-day counts of solves, reviews and time.</td></tr>
+      <tr><td><code>planmeta</code></td><td>Cached titles, difficulty and solved status for plan problems.</td></tr>
+      <tr><td><code>snippets</code></td><td>Your own snippet templates.</td></tr>
+      <tr><td><code>sound:success</code> / <code>sound:fail</code></td><td>Uploaded audio clips, if any.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============================ FILE MAP ============================ -->
+<h2>File map</h2>
+<p>Where to look when you want to change something.</p>
+<div class="card">
+  <table>
+    <thead><tr><th>Folder / file</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td><code>manifest.ts</code></td><td>Extension definition: permissions, shortcuts, which scripts run where.</td></tr>
+      <tr><td><code>src/background/</code></td><td>Service worker: bridge registration, shortcuts, toolbar badge.</td></tr>
+      <tr><td><code>public/bridge.js</code></td><td>Page-world helper: verdict hook, snippet insert, paste detection.</td></tr>
+      <tr><td><code>src/content/</code></td><td>The on-page app: <code>App.tsx</code> (wiring), <code>Dock.tsx</code>, <code>Sidebar.tsx</code>, <code>VerdictBanner.tsx</code>.</td></tr>
+      <tr><td><code>src/popup/</code></td><td>Toolbar popup.</td></tr>
+      <tr><td><code>src/components/</code></td><td>UI pieces: <code>solve/</code>, <code>plan/</code>, <code>contest/</code> (cheat check), <code>snippets/</code>, <code>shared/</code>, <code>ui/</code>.</td></tr>
+      <tr><td><code>src/hooks/</code></td><td>Page detection, verdict watcher, timer, live storage.</td></tr>
+      <tr><td><code>src/lib/</code></td><td>Logic: storage, review scheduling, constraints, sounds, cheat check, plans, bridge client.</td></tr>
+      <tr><td><code>src/api/leetcode.ts</code></td><td>Every request to LeetCode.</td></tr>
+      <tr><td><code>src/data/</code></td><td>Bundled study plans and snippet templates.</td></tr>
+      <tr><td><code>playground.html</code></td><td>Dev page (<code>npm run dev</code>) with fake storage and LeetCode data to work on the UI outside Chrome.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<footer>LeetGoat · generated from the source in <code>extension/</code></footer>
+</main>
+
+<script>
+  const tabs = document.querySelectorAll(".tab");
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      tabs.forEach((t) => t.setAttribute("aria-selected", String(t === tab)));
+      document.querySelectorAll(".flow").forEach((f) => f.classList.remove("active"));
+      document.getElementById("flow-" + tab.dataset.flow).classList.add("active");
+    });
+  });
+</script>
+</body>
+</html>
